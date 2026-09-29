@@ -1,0 +1,15 @@
+services:
+  api:
+    build:
+      context: ./api/OfficeDesk.Api
+    ports:
+      - "127.0.0.1:5080:8080"
+    environment:
+      ConnectionStrings__Office: Data Source=/data/office.db
+      TZ: Asia/Riyadh
+    volumes:
+      - officedesk-data:/data
+    restart: always
+
+volumes:
+  officedesk-data:

@@ -1,0 +1,4 @@
+bin/
+obj/
+office.db
+office.db-*

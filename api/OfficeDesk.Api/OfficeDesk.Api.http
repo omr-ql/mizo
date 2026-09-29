@@ -1,0 +1,6 @@
+@OfficeDesk.Api_HostAddress = http://127.0.0.1:5080
+
+GET {{OfficeDesk.Api_HostAddress}}/health
+Accept: application/json
+
+###

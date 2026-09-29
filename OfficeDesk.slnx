@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/api/">
+    <Project Path="api/OfficeDesk.Api/OfficeDesk.Api.csproj" />
+  </Folder>
+  <Folder Name="/outlook-host/">
+    <Project Path="outlook-host/OfficeDesk.OutlookHost/OfficeDesk.OutlookHost.csproj" />
+  </Folder>
+</Solution>

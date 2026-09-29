@@ -1,0 +1,28 @@
+{
+  "name": "office-desk",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_DEV=1 electron .\"",
+    "build": "npm run build:electron && vite build",
+    "start": "docker compose -p office-desk up -d --build && npm run build && electron ."
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
+    "electron": "^44.4.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "wait-on": "^9.4.1"
+  }
+}
