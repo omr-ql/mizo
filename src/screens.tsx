@@ -23,29 +23,47 @@ export function BriefingScreen({ onDraft }: { onDraft: (thread: ThreadRow) => vo
     ['للعلم', data.info]
   ] as const
 
+  const rows = columns.flatMap(([title, items]) => items.map((item) => ({ title, item })))
+
   return (
-    <div className="grid">
-      {columns.map(([title, items]) => (
-        <section className="card" key={title}>
-          <h2>{title}</h2>
-          {items.length === 0 && <p className="empty">لا شيء هنا.</p>}
-          <div className="stack">
-            {items.map((item) => (
-              <article key={item.threadId}>
-                <strong>{item.subject}</strong>
-                <div className="step">{item.recommendedStep}</div>
-                <div className="muted">{when(item.lastActivityAt)}</div>
-                {item.state === 'awaiting_me' && (
-                  <div className="actions">
-                    <button className="btn primary" onClick={() => onDraft({ ...item, id: item.threadId })}>مسودة</button>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="stats">
+        {columns.map(([title, items], index) => (
+          <article className={index === 0 ? 'stat hot' : 'stat'} key={title}>
+            <span>{title}</span>
+            <b>{items.length}</b>
+          </article>
+        ))}
+      </div>
+      {rows.length === 0 && <p className="empty">لا شيء هنا.</p>}
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <colgroup>
+              <col className="w-kind" /><col /><col className="w-step" /><col className="w-when" /><col className="w-btn" />
+            </colgroup>
+            <thead>
+              <tr><th>النوع</th><th>الموضوع</th><th>الخطوة</th><th>النشاط</th><th className="fit"></th></tr>
+            </thead>
+            <tbody>
+              {rows.map(({ title, item }) => (
+                <tr key={item.threadId}>
+                  <td><span className="badge">{title}</span></td>
+                  <td title={item.subject}><strong>{item.subject}</strong></td>
+                  <td className="step" title={item.recommendedStep}>{item.recommendedStep}</td>
+                  <td className="muted">{when(item.lastActivityAt)}</td>
+                  <td className="fit">
+                    {item.state === 'awaiting_me' && (
+                      <button className="btn primary" onClick={() => onDraft({ ...item, id: item.threadId })}>مسودة</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -69,19 +87,29 @@ export function MailScreen() {
         <button className="btn" aria-pressed={folder === 'sent'} onClick={() => setFolder('sent')}>الصادر</button>
       </div>
       {error && <p className="banner">{error}</p>}
-      <div className="stack">
-        {rows.length === 0 && <p className="empty">لا رسائل في هذا المجلد بعد.</p>}
-        {rows.map((row) => (
-          <article className="row" key={row.id}>
-            <strong>{row.subject || '(بدون عنوان)'}</strong>
-            <span className="muted">{row.sender} · {when(row.receivedAt)}{row.unread ? ' · غير مقروء' : ''}</span>
-            <span>{row.preview}</span>
-            <div className="actions">
-              <button className="btn" onClick={() => void open(row)}>افتح البريد</button>
-            </div>
-          </article>
-        ))}
-      </div>
+      {rows.length === 0 && <p className="empty">لا رسائل في هذا المجلد بعد.</p>}
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <colgroup>
+              <col /><col className="w-who" /><col className="w-when" /><col className="w-open" />
+            </colgroup>
+            <thead>
+              <tr><th>الموضوع</th><th>المرسل</th><th>الوقت</th><th className="fit"></th></tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td className="stack" title={row.subject}><strong>{row.subject || '(بدون عنوان)'}</strong><div className="muted">{row.preview}</div></td>
+                  <td title={row.sender}>{row.sender}{row.unread ? ' · غير مقروء' : ''}</td>
+                  <td className="muted">{when(row.receivedAt)}</td>
+                  <td className="fit"><button className="btn" onClick={() => void open(row)}>افتح البريد</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   )
 }
@@ -106,22 +134,39 @@ export function ThreadsScreen({ onDraft }: { onDraft: (thread: ThreadRow) => voi
   }
 
   return (
-    <div className="stack">
+    <>
       {error && <p className="banner">{error}</p>}
       {rows.length === 0 && <p className="empty">لا خيوط بعد. ستظهر بعد أول مزامنة من Outlook.</p>}
-      {rows.map((row) => (
-        <article className="row" key={row.id}>
-          <strong>{row.subject}</strong>
-          <span><span className="badge">{stateName(row.state)}</span> <span className="muted">{when(row.lastActivityAt)}</span></span>
-          <span className="step">{row.recommendedStep}</span>
-          <div className="actions">
-            <button className="btn" onClick={() => void open(row)}>افتح البريد</button>
-            {row.state === 'awaiting_me' && <button className="btn primary" onClick={() => onDraft(row)}>مسودة</button>}
-            {row.state !== 'closed' && <button className="btn ghost" onClick={() => void closeThread(row.id)}>إغلاق</button>}
-          </div>
-        </article>
-      ))}
-    </div>
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <colgroup>
+              <col /><col className="w-state" /><col className="w-step" /><col className="w-when" /><col className="w-actions" />
+            </colgroup>
+            <thead>
+              <tr><th>الموضوع</th><th>الحالة</th><th>الخطوة</th><th>النشاط</th><th className="fit"></th></tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td title={row.subject}><strong>{row.subject}</strong></td>
+                  <td><span className="badge">{stateName(row.state)}</span></td>
+                  <td className="step" title={row.recommendedStep}>{row.recommendedStep}</td>
+                  <td className="muted">{when(row.lastActivityAt)}</td>
+                  <td className="fit">
+                    <div className="actions">
+                      <button className="btn" onClick={() => void open(row)}>افتح البريد</button>
+                      {row.state === 'awaiting_me' && <button className="btn primary" onClick={() => onDraft(row)}>مسودة</button>}
+                      {row.state !== 'closed' && <button className="btn ghost" onClick={() => void closeThread(row.id)}>إغلاق</button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -265,17 +310,27 @@ export function PendingScreen() {
         <button className="btn primary" type="submit">إضافة</button>
       </form>
       {error && <p className="banner">{error}</p>}
-      <div className="stack">
-        {rows.length === 0 && <p className="empty">لا مهام معلّقة.</p>}
-        {rows.map((row) => (
-          <article className="row" key={row.id}>
-            <label className="checks">
-              <input type="checkbox" checked={row.done} onChange={() => void toggle(row)} />
-              <span>{row.title}</span>
-            </label>
-          </article>
-        ))}
-      </div>
+      {rows.length === 0 && <p className="empty">لا مهام معلّقة.</p>}
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>المهمة</th><th>الحالة</th></tr></thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td><strong dir="auto">{row.title}</strong></td>
+                  <td>
+                    <label className="checks">
+                      <input type="checkbox" checked={row.done} onChange={() => void toggle(row)} />
+                      <span>{row.done ? 'تمت' : 'معلّقة'}</span>
+                    </label>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   )
 }
@@ -323,9 +378,6 @@ export function SettingsScreen() {
       <label>بداية الدوام<input value={form.workStart} onChange={(event) => setForm({ ...form, workStart: event.target.value })} /></label>
       <label>نهاية الدوام<input value={form.workEnd} onChange={(event) => setForm({ ...form, workEnd: event.target.value })} /></label>
       <label>كلمات عاجلة<input value={form.urgentWords} onChange={(event) => setForm({ ...form, urgentWords: event.target.value })} /></label>
-      <label>المراقبة كل (دقيقة)
-        <input type="number" min={1} max={60} value={form.pollIntervalMinutes} onChange={(event) => setForm({ ...form, pollIntervalMinutes: Number(event.target.value) })} />
-      </label>
       <div className="checks">
         {dayOptions.map(([key, label]) => (
           <label key={key}><input type="checkbox" checked={selected.has(key)} onChange={() => toggleDay(key)} />{label}</label>

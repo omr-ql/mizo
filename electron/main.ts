@@ -2,8 +2,6 @@ import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen } from 'el
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-import { deflateSync } from 'zlib'
-
 const API = 'http://127.0.0.1:5080'
 const root = path.join(__dirname, '..')
 const dev = process.env.ELECTRON_DEV === '1'
@@ -35,52 +33,9 @@ const boot = {
   hostStarted: false
 }
 
-function iconBuffer() {
-  const size = 32
-  const raw = Buffer.alloc((size * 4 + 1) * size)
-  for (let y = 0; y < size; y++) {
-    const row = y * (size * 4 + 1)
-    raw[row] = 0
-    for (let x = 0; x < size; x++) {
-      const i = row + 1 + x * 4
-      const cx = x - size / 2 + 0.5
-      const cy = y - size / 2 + 0.5
-      const inside = cx * cx + cy * cy < (size / 2 - 1) ** 2
-      raw[i] = inside ? 0xc4 : 0x14
-      raw[i + 1] = inside ? 0xa4 : 0x12
-      raw[i + 2] = inside ? 0x6a : 0x0e
-      raw[i + 3] = 255
-    }
-  }
-  const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
-  ihdr[8] = 8
-  ihdr[9] = 6
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0))
-  ])
-}
-
-function chunk(type: string, data: Buffer) {
-  const name = Buffer.from(type)
-  const len = Buffer.alloc(4)
-  len.writeUInt32BE(data.length)
-  const crc = Buffer.alloc(4)
-  crc.writeUInt32BE(crc32(Buffer.concat([name, data])))
-  return Buffer.concat([len, name, data, crc])
-}
-
-function crc32(buf: Buffer) {
-  let c = ~0
-  for (const byte of buf) {
-    c ^= byte
-    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1))
-  }
-  return ~c >>> 0
+function appIcon() {
+  const image = nativeImage.createFromPath(path.join(root, 'src', 'assets', 'logo.png'))
+  return image.isEmpty() ? nativeImage.createEmpty() : image
 }
 
 function run(command: string, args: string[]) {
@@ -121,7 +76,8 @@ function createMainWindow() {
     minWidth: 900,
     minHeight: 620,
     title: 'mizo',
-    backgroundColor: '#14120e',
+    icon: appIcon(),
+    backgroundColor: '#eaf8e8',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -150,11 +106,13 @@ function createAlertWindow(): BrowserWindow {
     x: Math.round(area.x + 16),
     y: Math.round(area.y + area.height - height - 16),
     frame: false,
+    transparent: true,
     resizable: false,
     alwaysOnTop: true,
     skipTaskbar: false,
+    icon: appIcon(),
     show: false,
-    backgroundColor: '#1e1a14',
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -293,12 +251,12 @@ async function startServices() {
   startHost()
   try {
     const settings = await api('GET', '/api/settings')
-    app.setLoginItemSettings({ openAtLogin: Boolean(settings.startWithWindows) })
+    applyAutostart(Boolean(settings.startWithWindows))
   } catch {
     // Settings appear after the first successful call.
   }
   publishBoot()
-  setInterval(() => { void pollAlerts() }, 10000)
+  setInterval(() => { void pollAlerts() }, 2000)
   setInterval(() => { void maybeBriefing() }, 20000)
   void pollAlerts()
 }
@@ -348,7 +306,7 @@ function publishBoot() {
 }
 
 function createTray() {
-  tray = new Tray(nativeImage.createFromBuffer(iconBuffer()))
+  tray = new Tray(appIcon().resize({ width: 32, height: 32 }))
   tray.setToolTip('mizo')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'فتح', click: () => { mainWindow?.show(); mainWindow?.focus() } },
@@ -381,10 +339,16 @@ ipcMain.handle('api-request', async (_event, payload: { method: string; path: st
   return api(payload.method, payload.path, payload.body)
 })
 
-ipcMain.handle('set-autostart', (_event, on: boolean) => {
-  app.setLoginItemSettings({ openAtLogin: on })
+function applyAutostart(on: boolean) {
+  app.setLoginItemSettings({
+    openAtLogin: on,
+    path: process.execPath,
+    args: [root]
+  })
   return app.getLoginItemSettings().openAtLogin
-})
+}
+
+ipcMain.handle('set-autostart', (_event, on: boolean) => applyAutostart(on))
 
 ipcMain.handle('alert-dismiss', async (_event, id: number) => {
   await dismissAlert(id)

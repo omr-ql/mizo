@@ -17,7 +17,8 @@ public static class Program
         var api = Environment.GetEnvironmentVariable("OFFICEDESK_API") ?? "http://127.0.0.1:5080";
         using var http = new HttpClient { BaseAddress = new Uri(api.TrimEnd('/') + "/"), Timeout = TimeSpan.FromSeconds(60) };
         using var outlook = new OutlookClient();
-        var nextSync = DateTimeOffset.MinValue;
+        var inboxStamp = "";
+        var nextFullSync = DateTimeOffset.MinValue;
 
         while (true)
         {
@@ -28,12 +29,14 @@ public static class Program
 
                 Drain(http, outlook);
 
-                if (DateTimeOffset.UtcNow >= nextSync)
+                var stamp = outlook.InboxStamp();
+                if (stamp != inboxStamp || DateTimeOffset.UtcNow >= nextFullSync)
                 {
                     var items = outlook.ReadRecent();
                     Post(http, "/api/mail/sync", new { items });
                     Post(http, "/api/host/status", new { ok = true, message = outlook.StatusText });
-                    nextSync = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(settings.PollIntervalMinutes, 1, 60));
+                    inboxStamp = stamp;
+                    nextFullSync = DateTimeOffset.UtcNow.AddSeconds(20);
                 }
             }
             catch (Exception ex)

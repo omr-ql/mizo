@@ -71,6 +71,60 @@ public sealed class OutlookClient : IDisposable
         _ready = false;
     }
 
+    public string InboxStamp()
+    {
+        if (_namespace is null)
+            throw new InvalidOperationException("Outlook غير متصل.");
+
+        var account = FindAccount(_namespace, _account);
+        var store = Com.Get(account, "DeliveryStore");
+        object folder;
+        try
+        {
+            folder = Com.Call(store, "GetDefaultFolder", 6);
+        }
+        catch
+        {
+            return "";
+        }
+
+        object items;
+        try
+        {
+            items = Com.Call(folder, "Items");
+            try
+            {
+                Com.Call(items, "Sort", "[ReceivedTime]", true);
+            }
+            catch
+            {
+                // Keep the folder's own order when ReceivedTime is missing.
+            }
+        }
+        catch
+        {
+            return "";
+        }
+
+        var count = Convert.ToInt32(Com.Get(items, "Count"));
+        var take = Math.Min(count, 8);
+        var parts = new string[take];
+        for (var i = 1; i <= take; i++)
+        {
+            try
+            {
+                var item = Com.Index(items, i);
+                parts[i - 1] = TryStr(item, "EntryID") + ":" + TryBool(item, "UnRead");
+            }
+            catch
+            {
+                parts[i - 1] = "";
+            }
+        }
+
+        return string.Join("|", parts);
+    }
+
     public List<MailItemDto> ReadRecent()
     {
         if (_namespace is null)
