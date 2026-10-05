@@ -49,9 +49,9 @@ export function BriefingScreen({ onDraft }: { onDraft: (thread: ThreadRow) => vo
               {rows.map(({ title, item }) => (
                 <tr key={item.threadId}>
                   <td><span className="badge">{title}</span></td>
-                  <td title={item.subject}><strong>{item.subject}</strong></td>
+                  <td className="subject" title={item.subject}><bdi>{item.subject}</bdi></td>
                   <td className="step" title={item.recommendedStep}>{item.recommendedStep}</td>
-                  <td className="muted">{when(item.lastActivityAt)}</td>
+                  <td className="when">{when(item.lastActivityAt)}</td>
                   <td className="fit">
                     {item.state === 'awaiting_me' && (
                       <button className="btn primary" onClick={() => onDraft({ ...item, id: item.threadId })}>مسودة</button>
@@ -100,9 +100,9 @@ export function MailScreen() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td className="stack" title={row.subject}><strong>{row.subject || '(بدون عنوان)'}</strong><div className="muted">{row.preview}</div></td>
+                  <td className="stack" title={row.subject}><strong><bdi>{row.subject || '(بدون عنوان)'}</bdi></strong><div className="muted"><bdi>{row.preview}</bdi></div></td>
                   <td title={row.sender}>{row.sender}{row.unread ? ' · غير مقروء' : ''}</td>
-                  <td className="muted">{when(row.receivedAt)}</td>
+                  <td className="when">{when(row.receivedAt)}</td>
                   <td className="fit"><button className="btn" onClick={() => void open(row)}>افتح البريد</button></td>
                 </tr>
               ))}
@@ -149,10 +149,10 @@ export function ThreadsScreen({ onDraft }: { onDraft: (thread: ThreadRow) => voi
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td title={row.subject}><strong>{row.subject}</strong></td>
+                  <td className="subject" title={row.subject}><bdi>{row.subject}</bdi></td>
                   <td><span className="badge">{stateName(row.state)}</span></td>
                   <td className="step" title={row.recommendedStep}>{row.recommendedStep}</td>
-                  <td className="muted">{when(row.lastActivityAt)}</td>
+                  <td className="when">{when(row.lastActivityAt)}</td>
                   <td className="fit">
                     <div className="actions">
                       <button className="btn" onClick={() => void open(row)}>افتح البريد</button>

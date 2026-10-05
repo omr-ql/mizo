@@ -4,7 +4,7 @@ public sealed class Settings
 {
     public int Id { get; set; }
     public string DisplayName { get; set; } = "mizo";
-    public string AccountSmtp { get; set; } = "o.bamusa@ejadah-sa.com";
+    public string AccountSmtp { get; set; } = "";
     public string WorkDays { get; set; } = "Sunday,Monday,Tuesday,Wednesday,Thursday";
     public string WorkStart { get; set; } = "08:00";
     public string WorkEnd { get; set; } = "17:00";

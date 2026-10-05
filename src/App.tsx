@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BriefingScreen, DraftScreen, MailScreen, PendingScreen, SettingsScreen, ThreadsScreen } from './screens'
 import logo from './assets/logo.png'
-import type { BootStatus, DraftSeed, HostStatus, ScreenName, ThreadRow } from './types'
+import type { BootStatus, DraftSeed, HostStatus, ScreenName, Settings, ThreadRow } from './types'
 
 const nav: { id: ScreenName; label: string; icon: string }[] = [
   { id: 'briefing', label: 'إحاطة', icon: 'grid' },
@@ -36,6 +36,10 @@ export function App() {
   const [boot, setBoot] = useState<BootStatus | null>(null)
   const [host, setHost] = useState<HostStatus | null>(null)
   const [seed, setSeed] = useState<DraftSeed | null>(null)
+  const [account, setAccount] = useState('')
+  const [knownAccount, setKnownAccount] = useState(false)
+  const [setupEmail, setSetupEmail] = useState('')
+  const [setupError, setSetupError] = useState('')
 
   useEffect(() => {
     if (!window.office) return
@@ -54,6 +58,30 @@ export function App() {
     })
   }, [])
 
+  useEffect(() => {
+    if (!window.office || !boot?.api) return
+    window.office.request<Settings>('GET', '/api/settings').then((settings) => {
+      setAccount(settings.accountSmtp.trim())
+      setKnownAccount(true)
+    }).catch(() => undefined)
+  }, [boot?.api])
+
+  async function saveAccount() {
+    const email = setupEmail.trim()
+    if (!email.includes('@') || email.includes(' ')) {
+      setSetupError('اكتب بريد Outlook كما يظهر في الحساب.')
+      return
+    }
+    try {
+      const current = await window.office.request<Settings>('GET', '/api/settings')
+      await window.office.request('PUT', '/api/settings', { ...current, accountSmtp: email })
+      setAccount(email)
+      setSetupError('')
+    } catch (err) {
+      setSetupError(err instanceof Error ? err.message : 'تعذر حفظ البريد.')
+    }
+  }
+
   function draftFrom(thread: ThreadRow) {
     const subject = thread.subject.startsWith('Re:') ? thread.subject : `Re: ${thread.subject}`
     setSeed({
@@ -71,7 +99,24 @@ export function App() {
     return <main className="main"><p>افتح mizo من تطبيق سطح المكتب.</p></main>
   }
 
-  const account = 'o.bamusa@ejadah-sa.com'
+  if (!knownAccount || !account) {
+    return (
+      <main className="setup">
+        <form onSubmit={(event) => { event.preventDefault(); void saveAccount() }}>
+          <img src={logo} alt="" />
+          <h1>mizo</h1>
+          <p>اكتب بريد Outlook على هذا الجهاز. التطبيق يقرأ هذا الحساب فقط.</p>
+          {boot?.dockerError && <div className="banner">{boot.dockerError}</div>}
+          <label>البريد
+            <input value={setupEmail} onChange={(event) => setSetupEmail(event.target.value)} placeholder="name@company.com" autoFocus />
+          </label>
+          <button className="btn primary" type="submit" disabled={!boot?.api}>ابدأ</button>
+          {setupError && <p className="banner">{setupError}</p>}
+          {!boot?.api && !boot?.dockerError && <p className="muted">جارٍ تجهيز الخدمة…</p>}
+        </form>
+      </main>
+    )
+  }
 
   return (
     <div className="shell">

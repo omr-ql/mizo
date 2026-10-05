@@ -25,6 +25,12 @@ public static class Program
             try
             {
                 var settings = GetSettings(http);
+                if (string.IsNullOrWhiteSpace(settings.AccountSmtp))
+                {
+                    Post(http, "/api/host/status", new { ok = false, message = "بانتظار بريد Outlook." });
+                    Thread.Sleep(TimeSpan.FromSeconds(3));
+                    continue;
+                }
                 outlook.Connect(settings.AccountSmtp);
 
                 Drain(http, outlook);
@@ -123,7 +129,7 @@ public static class Program
 
 sealed class SettingsDto
 {
-    public string AccountSmtp { get; set; } = "o.bamusa@ejadah-sa.com";
+    public string AccountSmtp { get; set; } = "";
     public int PollIntervalMinutes { get; set; } = 3;
 }
 

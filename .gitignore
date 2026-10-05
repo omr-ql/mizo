@@ -4,6 +4,7 @@ node_modules/
 dist/
 dist-electron/
 publish/
+outlook-host/publish/
 *.user
 *.db
 *.db-*

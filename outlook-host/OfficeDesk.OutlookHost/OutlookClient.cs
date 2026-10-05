@@ -17,9 +17,10 @@ public sealed class OutlookClient : IDisposable
 
     public void Connect(string accountSmtp)
     {
-        _account = accountSmtp.Trim();
-        if (_ready && IsAlive())
+        var next = accountSmtp.Trim();
+        if (_ready && IsAlive() && _account.Equals(next, StringComparison.OrdinalIgnoreCase))
             return;
+        _account = next;
 
         Drop();
         _background = EnsureOutlookProcess();

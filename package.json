@@ -7,7 +7,8 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_DEV=1 electron .\"",
     "build": "npm run build:electron && vite build",
-    "start": "docker compose -p office-desk up -d --build && npm run build && electron ."
+    "start": "docker compose -p office-desk up -d --build && npm run build && electron .",
+    "export": "dotnet publish outlook-host/OfficeDesk.OutlookHost/OfficeDesk.OutlookHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o outlook-host/publish && npm run build && electron-builder --win portable"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -21,8 +22,50 @@
     "concurrently": "^10.0.5",
     "cross-env": "^10.1.0",
     "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "wait-on": "^9.4.1"
+  },
+  "build": {
+    "appId": "com.ejadah.mizo",
+    "productName": "mizo",
+    "directories": {
+      "output": "publish"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "docker-compose.yml",
+        "to": "docker-compose.yml"
+      },
+      {
+        "from": "api/OfficeDesk.Api",
+        "to": "api/OfficeDesk.Api",
+        "filter": [
+          "**/*",
+          "!bin/**",
+          "!obj/**",
+          "!office.db*"
+        ]
+      },
+      {
+        "from": "src/assets/logo.png",
+        "to": "logo.png"
+      },
+      {
+        "from": "outlook-host/publish",
+        "to": "outlook-host"
+      }
+    ],
+    "win": {
+      "icon": "src/assets/mizo.ico",
+      "target": "portable",
+      "artifactName": "mizo.exe"
+    }
   }
 }

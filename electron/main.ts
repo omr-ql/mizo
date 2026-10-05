@@ -3,7 +3,7 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 const API = 'http://127.0.0.1:5080'
-const root = path.join(__dirname, '..')
+const root = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..')
 const dev = process.env.ELECTRON_DEV === '1'
 
 type DeskAlert = {
@@ -34,7 +34,10 @@ const boot = {
 }
 
 function appIcon() {
-  const image = nativeImage.createFromPath(path.join(root, 'src', 'assets', 'logo.png'))
+  const file = app.isPackaged
+    ? path.join(process.resourcesPath, 'logo.png')
+    : path.join(root, 'src', 'assets', 'logo.png')
+  const image = nativeImage.createFromPath(file)
   return image.isEmpty() ? nativeImage.createEmpty() : image
 }
 
@@ -66,7 +69,8 @@ async function api(method: string, apiPath: string, body?: unknown) {
 
 function pageUrl(file: string) {
   if (dev) return `http://127.0.0.1:5173/${file}`
-  return `file:///${path.join(root, 'dist', file).replace(/\\/g, '/')}`
+  const base = app.isPackaged ? app.getAppPath() : root
+  return `file:///${path.join(base, 'dist', file).replace(/\\/g, '/')}`
 }
 
 function createMainWindow() {
@@ -87,6 +91,7 @@ function createMainWindow() {
     }
   })
   mainWindow.once('ready-to-show', () => mainWindow?.show())
+  mainWindow.webContents.on('did-fail-load', () => mainWindow?.show())
   mainWindow.on('close', (event) => {
     if (!quitting) {
       event.preventDefault()
@@ -186,15 +191,19 @@ async function waitForApi() {
 
 function startHost() {
   if (quitting || host) return
+  const exe = path.join(root, 'outlook-host', 'OfficeDesk.OutlookHost.exe')
   const dll = path.join(root, 'outlook-host', 'OfficeDesk.OutlookHost', 'bin', 'Release', 'net10.0-windows', 'OfficeDesk.OutlookHost.dll')
-  if (!fs.existsSync(dll)) {
+  const useExe = fs.existsSync(exe)
+  if (!useExe && !fs.existsSync(dll)) {
     boot.hostStarted = false
     boot.dockerError = boot.dockerError ?? 'ملف Outlook host غير مبني.'
     return
   }
   const logPath = path.join(app.getPath('userData'), 'outlook-host.log')
   const log = fs.createWriteStream(logPath, { flags: 'a' })
-  host = spawn('dotnet', ['exec', dll], {
+  host = useExe
+    ? spawn(exe, [], { cwd: root, windowsHide: true, env: { ...process.env, OFFICEDESK_API: API } })
+    : spawn('dotnet', ['exec', dll], {
     cwd: root,
     windowsHide: true,
     env: { ...process.env, OFFICEDESK_API: API }
@@ -343,7 +352,7 @@ function applyAutostart(on: boolean) {
   app.setLoginItemSettings({
     openAtLogin: on,
     path: process.execPath,
-    args: [root]
+    args: app.isPackaged ? [] : [root]
   })
   return app.getLoginItemSettings().openAtLogin
 }
