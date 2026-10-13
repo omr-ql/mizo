@@ -2,13 +2,14 @@
   "name": "office-desk",
   "version": "1.0.0",
   "private": true,
+  "description": "mizo",
   "main": "dist-electron/main.js",
   "scripts": {
     "build:electron": "tsc -p tsconfig.electron.json",
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_DEV=1 electron .\"",
     "build": "npm run build:electron && vite build",
     "start": "docker compose -p office-desk up -d --build && npm run build && electron .",
-    "export": "dotnet publish outlook-host/OfficeDesk.OutlookHost/OfficeDesk.OutlookHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o outlook-host/publish && npm run build && electron-builder --win portable"
+    "export": "dotnet publish outlook-host/OfficeDesk.OutlookHost/OfficeDesk.OutlookHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o outlook-host/publish && npm run build && electron-builder --win nsis"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -64,8 +65,19 @@
     ],
     "win": {
       "icon": "src/assets/mizo.ico",
-      "target": "portable",
-      "artifactName": "mizo.exe"
+      "target": "nsis",
+      "artifactName": "mizo-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "mizo",
+      "uninstallDisplayName": "mizo",
+      "installerIcon": "src/assets/mizo.ico",
+      "uninstallerIcon": "src/assets/mizo.ico"
     }
   }
 }

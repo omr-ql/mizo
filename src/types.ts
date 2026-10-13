@@ -1,4 +1,4 @@
-export type ScreenName = 'briefing' | 'mail' | 'threads' | 'draft' | 'pending' | 'settings'
+export type ScreenName = 'briefing' | 'mail' | 'summary' | 'draft' | 'pending' | 'settings'
 
 export type BootStatus = {
   api: boolean
@@ -33,8 +33,28 @@ export type MailRow = {
   senderAddress: string
   receivedAt: string
   preview: string
+  summary: string
   unread: boolean
   classification: string
+}
+
+export type MailDigestItem = {
+  id: number
+  subject: string
+  sender: string
+  summary: string
+  receivedAt: string
+  entryId: string
+  storeId: string
+  unread: boolean
+  threadId: number | null
+  state: string
+  counterpartAddress: string
+}
+
+export type MailDigest = {
+  lead: string
+  items: MailDigestItem[]
 }
 
 export type ThreadRow = {

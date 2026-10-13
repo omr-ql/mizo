@@ -72,6 +72,8 @@ public sealed class OfficeService(OfficeDb db)
             row.SenderAddress = item.SenderAddress ?? "";
             row.ReceivedAt = item.ReceivedAt;
             row.Preview = item.Preview ?? "";
+            row.Body = ClipBody(string.IsNullOrWhiteSpace(item.Body) ? item.Preview : item.Body);
+            row.Summary = MailSummarizer.Summarize(row.Subject, row.Body);
             row.Unread = item.Unread;
             row.Classification = MailRules.Classify(item, settings);
             row.SyncedAt = now;
@@ -102,6 +104,51 @@ public sealed class OfficeService(OfficeDb db)
         });
         db.SaveChanges();
         return created;
+    }
+
+    public int RefreshSummaries()
+    {
+        var rows = db.MailMessages.ToList();
+        foreach (var row in rows)
+        {
+            var source = string.IsNullOrWhiteSpace(row.Body) ? row.Preview : row.Body;
+            row.Summary = MailSummarizer.Summarize(row.Subject, source);
+        }
+        db.SaveChanges();
+        return rows.Count;
+    }
+
+    public MailDigestView Digest()
+    {
+        var threads = db.Threads.AsNoTracking().ToDictionary(thread => thread.ConversationId);
+        var rows = db.MailMessages.AsEnumerable()
+            .Where(row => row.Folder == "inbox" && row.Classification != "marketing")
+            .OrderByDescending(row => row.ReceivedAt)
+            .Take(8)
+            .ToList();
+
+        return new MailDigestView
+        {
+            Lead = LeadOf(rows),
+            Items = rows.Select(row =>
+            {
+                threads.TryGetValue(row.ConversationId, out var thread);
+                return new MailDigestItem
+                {
+                    Id = row.Id,
+                    Subject = string.IsNullOrWhiteSpace(row.Subject) ? "(بدون عنوان)" : row.Subject,
+                    Sender = row.Sender,
+                    Summary = string.IsNullOrWhiteSpace(row.Summary) ? row.Subject : row.Summary,
+                    ReceivedAt = row.ReceivedAt,
+                    EntryId = row.EntryId,
+                    StoreId = row.StoreId,
+                    Unread = row.Unread,
+                    ThreadId = thread?.Id,
+                    State = thread?.State ?? "",
+                    CounterpartAddress = thread?.CounterpartAddress ?? row.SenderAddress
+                };
+            }).ToList()
+        };
     }
 
     public List<MailMessage> Mail(string? folder)
@@ -446,6 +493,30 @@ public sealed class OfficeService(OfficeDb db)
         return job;
     }
 
+    static string LeadOf(IReadOnlyList<MailMessage> rows)
+    {
+        if (rows.Count == 0)
+            return "لا رسائل بعد. التلخيص يظهر بعد وصول البريد من Outlook.";
+        return string.Join(" ", rows.Take(3).Select(row =>
+        {
+            var who = string.IsNullOrWhiteSpace(row.Sender) ? "رسالة" : row.Sender.Trim();
+            var text = string.IsNullOrWhiteSpace(row.Summary) ? row.Subject : row.Summary.Trim();
+            return $"{who}: {text}";
+        }));
+    }
+
+    static string AlertText(MailMessage row)
+    {
+        var text = string.IsNullOrWhiteSpace(row.Summary) ? row.Subject : row.Summary;
+        return string.IsNullOrWhiteSpace(row.Sender) ? text : $"{row.Sender}: {text}";
+    }
+
+    static string ClipBody(string? value)
+    {
+        var text = value ?? "";
+        return text.Length <= 6000 ? text : text[..6000];
+    }
+
     static bool AlreadyAnswered(SyncRequest request, MailMessage row) =>
         request.Items.Any(item =>
             item.Folder == "sent"
@@ -456,10 +527,10 @@ public sealed class OfficeService(OfficeDb db)
     {
         var (title, message, kind, source) = row.Classification switch
         {
-            "urgent" => ("عاجل", $"{row.Sender}: {row.Subject}", "urgent", "mail"),
+            "urgent" => ("عاجل", AlertText(row), "urgent", "mail"),
             "teams" => ("Teams", $"إشعار من {row.Sender}. افتح Teams واقرأ هناك.", "teams", "teams"),
             "hr" => ("تعميم", string.IsNullOrWhiteSpace(row.Subject) ? "تعميم للقراءة" : row.Subject, "read", "mail"),
-            _ => ("يحتاج إجراء", $"{row.Sender}: {row.Subject}", "action", "mail")
+            _ => ("يحتاج إجراء", AlertText(row), "action", "mail")
         };
         return new DeskAlert
         {

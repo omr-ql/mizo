@@ -25,6 +25,8 @@ public sealed class MailMessage
     public string SenderAddress { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
     public string Preview { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string Summary { get; set; } = "";
     public bool Unread { get; set; }
     public string Classification { get; set; } = "";
     public DateTimeOffset SyncedAt { get; set; }

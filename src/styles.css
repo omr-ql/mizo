@@ -301,6 +301,46 @@ textarea { min-height: 180px; resize: vertical; }
 
 .empty { color: var(--muted); padding: 12px 0; }
 
+.summary { display: grid; gap: 18px; }
+.lead {
+  margin: 0;
+  padding: 22px 24px;
+  border-radius: 28px;
+  background: var(--canvas);
+  font-size: 18px;
+  line-height: 1.8;
+  font-weight: 600;
+}
+.summary h2 { margin: 0 0 10px; font-size: 16px; }
+.summary ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.summary li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--canvas);
+}
+.summary li div { min-width: 0; }
+.summary li strong,
+.summary li span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.summary li span { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.summary li span.digest {
+  white-space: normal;
+  text-overflow: clip;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.7;
+  font-weight: 600;
+}
+.summary li .btn { flex: none; }
+
 .setup {
   height: 100%;
   display: grid;

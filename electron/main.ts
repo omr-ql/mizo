@@ -82,6 +82,7 @@ function createMainWindow() {
     title: 'mizo',
     icon: appIcon(),
     backgroundColor: '#eaf8e8',
+    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -90,6 +91,7 @@ function createMainWindow() {
       sandbox: false
     }
   })
+  mainWindow.setMenu(null)
   mainWindow.once('ready-to-show', () => mainWindow?.show())
   mainWindow.webContents.on('did-fail-load', () => mainWindow?.show())
   mainWindow.on('close', (event) => {
@@ -330,7 +332,8 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => { mainWindow?.show(); mainWindow?.focus() })
   app.whenReady().then(() => {
-    app.setAppUserModelId('com.ejadah.office-desk')
+    app.setAppUserModelId('com.ejadah.mizo')
+    Menu.setApplicationMenu(null)
     createMainWindow()
     createTray()
     void startServices()

@@ -30,7 +30,11 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
     db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
     db.Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
-    scope.ServiceProvider.GetRequiredService<OfficeService>().EnsureSettings();
+    EnsureColumn(db, "MailMessages", "Body");
+    EnsureColumn(db, "MailMessages", "Summary");
+    var office = scope.ServiceProvider.GetRequiredService<OfficeService>();
+    office.EnsureSettings();
+    office.RefreshSummaries();
 }
 
 app.Use(async (context, next) =>
@@ -59,6 +63,8 @@ api.MapPost("/mail/sync", (SyncRequest body, OfficeService office) =>
     Results.Ok(new { alerts = office.Sync(body) }));
 
 api.MapGet("/mail", (string? folder, OfficeService office) => Results.Ok(office.Mail(folder)));
+
+api.MapGet("/mail/digest", (OfficeService office) => Results.Ok(office.Digest()));
 
 api.MapPost("/mail/open", (OpenMailRequest body, OfficeService office) => Results.Ok(office.OpenMail(body)));
 
@@ -118,6 +124,25 @@ api.MapGet("/host/status", (OfficeService office) => Results.Ok(office.Host()));
 api.MapPost("/host/status", (HostReport body, OfficeService office) => Results.Ok(office.ReportHost(body)));
 
 app.Run();
+
+static void EnsureColumn(OfficeDb db, string table, string column)
+{
+    var connection = db.Database.GetDbConnection();
+    if (connection.State != System.Data.ConnectionState.Open)
+        connection.Open();
+    using var check = connection.CreateCommand();
+    check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = $name";
+    var name = check.CreateParameter();
+    name.ParameterName = "$name";
+    name.Value = column;
+    check.Parameters.Add(name);
+    var exists = Convert.ToInt32(check.ExecuteScalar()) > 0;
+    if (exists)
+        return;
+    using var alter = connection.CreateCommand();
+    alter.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" TEXT NOT NULL DEFAULT ''";
+    alter.ExecuteNonQuery();
+}
 
 static string? DataSourceOf(string connectionString)
 {

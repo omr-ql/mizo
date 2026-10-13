@@ -1,20 +1,9 @@
-const stateLabel: Record<string, string> = {
-  awaiting_me: 'يحتاجك',
-  awaiting_them: 'بانتظارهم',
-  info: 'للعلم',
-  closed: 'مغلق'
-}
-
 const draftLabel: Record<string, string> = {
   editing: 'مسودة',
   send_requested: 'بانتظار الإرسال',
   sent: 'أُرسل',
   save_requested: 'جارٍ الحفظ',
   saved: 'حُفظت في Outlook'
-}
-
-export function stateName(state: string) {
-  return stateLabel[state] ?? state
 }
 
 export function draftName(status: string) {

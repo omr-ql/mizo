@@ -11,6 +11,7 @@ public sealed class SyncItem
     public string SenderAddress { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
     public string Preview { get; set; } = "";
+    public string Body { get; set; } = "";
     public bool Unread { get; set; }
     public bool IsTeams { get; set; }
     public string MessageClass { get; set; } = "";
@@ -76,6 +77,27 @@ public sealed class HostReport
 public sealed class GenerateBriefingRequest
 {
     public bool QuietIfEmpty { get; set; } = true;
+}
+
+public sealed class MailDigestView
+{
+    public string Lead { get; set; } = "";
+    public List<MailDigestItem> Items { get; set; } = [];
+}
+
+public sealed class MailDigestItem
+{
+    public int Id { get; set; }
+    public string Subject { get; set; } = "";
+    public string Sender { get; set; } = "";
+    public string Summary { get; set; } = "";
+    public DateTimeOffset ReceivedAt { get; set; }
+    public string EntryId { get; set; } = "";
+    public string StoreId { get; set; } = "";
+    public bool Unread { get; set; }
+    public int? ThreadId { get; set; }
+    public string State { get; set; } = "";
+    public string CounterpartAddress { get; set; } = "";
 }
 
 public sealed class BriefingItem

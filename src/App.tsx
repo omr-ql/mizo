@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { BriefingScreen, DraftScreen, MailScreen, PendingScreen, SettingsScreen, ThreadsScreen } from './screens'
+import { BriefingScreen, DraftScreen, MailScreen, PendingScreen, SettingsScreen, SummaryScreen } from './screens'
 import logo from './assets/logo.png'
 import type { BootStatus, DraftSeed, HostStatus, ScreenName, Settings, ThreadRow } from './types'
 
 const nav: { id: ScreenName; label: string; icon: string }[] = [
   { id: 'briefing', label: 'إحاطة', icon: 'grid' },
   { id: 'mail', label: 'البريد', icon: 'mail' },
-  { id: 'threads', label: 'الخيوط', icon: 'box' },
+  { id: 'summary', label: 'ملخص', icon: 'note' },
   { id: 'draft', label: 'مسودة', icon: 'pen' },
   { id: 'pending', label: 'معلّق', icon: 'clock' },
   { id: 'settings', label: 'إعدادات', icon: 'gear' }
@@ -15,7 +15,7 @@ const nav: { id: ScreenName; label: string; icon: string }[] = [
 function Icon({ name }: { name: string }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8 }
   if (name === 'mail') return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>
-  if (name === 'box') return <svg {...common}><path d="M3 7.5 12 3l9 4.5-9 4.5L3 7.5Z" /><path d="M3 7.5V16.5L12 21l9-4.5V7.5" /><path d="M12 12v9" /></svg>
+  if (name === 'note') return <svg {...common}><path d="M7 3.5h7.5L19 8v12.5H7V3.5Z" /><path d="M14.5 3.5V8H19" /><path d="M10 12h5M10 16h5" /></svg>
   if (name === 'pen') return <svg {...common}><path d="M4 20h4l10-10-4-4L4 16v4Z" /><path d="m13 7 4 4" /></svg>
   if (name === 'clock') return <svg {...common}><circle cx="12" cy="12" r="8" /><path d="M12 8v5l3 2" /></svg>
   if (name === 'gear') return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10 1.4 1.4m0-12.8-1.4 1.4m-10 10-1.4 1.4" /></svg>
@@ -25,7 +25,7 @@ function Icon({ name }: { name: string }) {
 const titles: Record<ScreenName, string> = {
   briefing: 'إحاطة',
   mail: 'البريد',
-  threads: 'الخيوط',
+  summary: 'ملخص',
   draft: 'مسودة',
   pending: 'معلّق',
   settings: 'إعدادات'
@@ -147,7 +147,7 @@ export function App() {
           {boot?.dockerError && <div className="banner">{boot.dockerError}</div>}
           {screen === 'briefing' && <BriefingScreen onDraft={draftFrom} />}
           {screen === 'mail' && <MailScreen />}
-          {screen === 'threads' && <ThreadsScreen onDraft={draftFrom} />}
+          {screen === 'summary' && <SummaryScreen onDraft={draftFrom} />}
           {screen === 'draft' && <DraftScreen seed={seed} />}
           {screen === 'pending' && <PendingScreen />}
           {screen === 'settings' && <SettingsScreen />}

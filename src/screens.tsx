@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { draftName, stateName, when } from './format'
-import type { Briefing, DraftRow, DraftSeed, MailRow, PendingRow, Settings, ThreadRow } from './types'
+import { draftName, when } from './format'
+import type { Briefing, DraftRow, DraftSeed, MailDigest, MailRow, PendingRow, Settings, ThreadRow } from './types'
 
 async function load<T>(path: string): Promise<T> {
   return window.office.request<T>('GET', path)
@@ -100,7 +100,7 @@ export function MailScreen() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td className="stack" title={row.subject}><strong><bdi>{row.subject || '(بدون عنوان)'}</bdi></strong><div className="muted"><bdi>{row.preview}</bdi></div></td>
+                  <td className="stack" title={row.summary || row.preview}><strong><bdi>{row.subject || '(بدون عنوان)'}</bdi></strong><div className="muted"><bdi>{row.summary || row.preview}</bdi></div></td>
                   <td title={row.sender}>{row.sender}{row.unread ? ' · غير مقروء' : ''}</td>
                   <td className="when">{when(row.receivedAt)}</td>
                   <td className="fit"><button className="btn" onClick={() => void open(row)}>افتح البريد</button></td>
@@ -114,59 +114,58 @@ export function MailScreen() {
   )
 }
 
-export function ThreadsScreen({ onDraft }: { onDraft: (thread: ThreadRow) => void }) {
-  const [rows, setRows] = useState<ThreadRow[]>([])
+export function SummaryScreen({ onDraft }: { onDraft: (thread: ThreadRow) => void }) {
+  const [digest, setDigest] = useState<MailDigest | null>(null)
   const [error, setError] = useState('')
 
-  function refresh() {
-    load<ThreadRow[]>('/api/threads').then(setRows).catch((err: Error) => setError(err.message))
+  useEffect(() => {
+    load<MailDigest>('/api/mail/digest').then(setDigest).catch((err: Error) => setError(err.message))
+  }, [])
+
+  async function open(item: MailDigest['items'][number]) {
+    await window.office.request('POST', '/api/mail/open', { entryId: item.entryId, storeId: item.storeId })
   }
 
-  useEffect(() => { refresh() }, [])
-
-  async function closeThread(id: number) {
-    await window.office.request('PATCH', `/api/threads/${id}`, { state: 'closed' })
-    refresh()
-  }
-
-  async function open(row: ThreadRow) {
-    await window.office.request('POST', '/api/mail/open', { entryId: row.entryId, storeId: row.storeId })
-  }
+  if (error) return <p className="banner">{error}</p>
+  if (!digest) return <p className="muted">جارٍ التحميل…</p>
 
   return (
-    <>
-      {error && <p className="banner">{error}</p>}
-      {rows.length === 0 && <p className="empty">لا خيوط بعد. ستظهر بعد أول مزامنة من Outlook.</p>}
-      {rows.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <colgroup>
-              <col /><col className="w-state" /><col className="w-step" /><col className="w-when" /><col className="w-actions" />
-            </colgroup>
-            <thead>
-              <tr><th>الموضوع</th><th>الحالة</th><th>الخطوة</th><th>النشاط</th><th className="fit"></th></tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="subject" title={row.subject}><bdi>{row.subject}</bdi></td>
-                  <td><span className="badge">{stateName(row.state)}</span></td>
-                  <td className="step" title={row.recommendedStep}>{row.recommendedStep}</td>
-                  <td className="when">{when(row.lastActivityAt)}</td>
-                  <td className="fit">
-                    <div className="actions">
-                      <button className="btn" onClick={() => void open(row)}>افتح البريد</button>
-                      {row.state === 'awaiting_me' && <button className="btn primary" onClick={() => onDraft(row)}>مسودة</button>}
-                      {row.state !== 'closed' && <button className="btn ghost" onClick={() => void closeThread(row.id)}>إغلاق</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div className="summary">
+      <p className="lead">{digest.lead}</p>
+      {digest.items.length === 0 && <p className="empty">لا يوجد بريد لتلخيصه بعد.</p>}
+      {digest.items.length > 0 && (
+        <section>
+          <h2>من داخل البريد</h2>
+          <ul>
+            {digest.items.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong><bdi>{item.subject}</bdi></strong>
+                  <span>{item.sender}{item.unread ? ' · غير مقروء' : ''}</span>
+                  <span className="digest"><bdi>{item.summary}</bdi></span>
+                </div>
+                <div className="actions">
+                  <button className="btn" onClick={() => void open(item)}>افتح البريد</button>
+                  {item.threadId && item.state === 'awaiting_me' && (
+                    <button className="btn primary" onClick={() => onDraft({
+                      id: item.threadId,
+                      subject: item.subject,
+                      state: item.state,
+                      recommendedStep: '',
+                      entryId: item.entryId,
+                      storeId: item.storeId,
+                      counterpartName: item.sender,
+                      counterpartAddress: item.counterpartAddress,
+                      lastActivityAt: item.receivedAt
+                    })}>مسودة</button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-    </>
+    </div>
   )
 }
 

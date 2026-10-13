@@ -304,7 +304,10 @@ public sealed class OutlookClient : IDisposable
                     && !messageClass.Contains("Teams", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var preview = TryStr(item, "Body").Replace('\r', ' ').Replace('\n', ' ').Trim();
+                var body = WithoutLinks(TryStr(item, "Body")).Trim();
+                if (body.Length > 6000)
+                    body = body[..6000];
+                var preview = body.Replace('\r', ' ').Replace('\n', ' ').Trim();
                 if (preview.Length > 240)
                     preview = preview[..240];
 
@@ -318,6 +321,7 @@ public sealed class OutlookClient : IDisposable
                     Sender = FirstNonEmpty(TryStr(item, "SenderName"), TryStr(item, "SenderEmailAddress")),
                     SenderAddress = Smtp(item),
                     ReceivedAt = When(item),
+                    Body = body,
                     Preview = preview,
                     Unread = TryBool(item, "UnRead"),
                     IsTeams = messageClass.Contains("Teams", StringComparison.OrdinalIgnoreCase),
@@ -390,6 +394,22 @@ public sealed class OutlookClient : IDisposable
         }
     }
 
+    static string WithoutLinks(string body)
+    {
+        var text = body;
+        while (true)
+        {
+            var start = text.IndexOf("<http", StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+                break;
+            var end = text.IndexOf('>', start);
+            if (end < 0)
+                break;
+            text = text.Remove(start, end - start + 1);
+        }
+        return text;
+    }
+
     static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "";
 }
@@ -404,6 +424,7 @@ public sealed class MailItemDto
     public string Sender { get; set; } = "";
     public string SenderAddress { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
+    public string Body { get; set; } = "";
     public string Preview { get; set; } = "";
     public bool Unread { get; set; }
     public bool IsTeams { get; set; }
